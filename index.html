@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗器械产品技术要求生成器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/docx@8.2.3/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 76px);
+        }
+
+        .sidebar {
+            width: 420px;
+            background: white;
+            overflow-y: auto;
+            border-right: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fafafa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header h2 {
+            font-size: 16px;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .form-section {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .form-section h3 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .preview-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background: #e5e7eb;
+        }
+
+        .preview-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        .preview-content {
+            padding: 60px 70px;
+            min-height: 1000px;
+        }
+
+        .preview-content h1 {
+            text-align: center;
+            font-size: 22px;
+            margin-bottom: 30px;
+            color: #1f2937;
+        }
+
+        .preview-content h2 {
+            font-size: 16px;
+            margin: 24px 0 12px 0;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+
+        .preview-content h3 {
+            font-size: 14px;
+            margin: 16px 0 8px 0;
+            color: #4b5563;
+        }
+
+        .preview-content p {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .preview-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+
+        .preview-content table th,
+        .preview-content table td {
+            border: 1px solid #d1d5db;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        .preview-content table th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .preview-content table td {
+            color: #4b5563;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        .saved-list {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .saved-list h3 {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .saved-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .saved-item:hover {
+            background: #f3f4f6;
+        }
+
+        .saved-item-name {
+            font-size: 13px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .saved-item-date {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .saved-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .saved-item-actions button {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .saved-item-actions .load-btn {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .saved-item-actions .delete-btn {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 50vh;
+            }
+
+            .preview-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 医疗器械产品技术要求生成器</h1>
+        <div class="header-actions">
+            <button class="btn btn-warning" onclick="saveData()">💾 保存</button>
+            <button class="btn btn-success" onclick="exportPDF()">📄 导出PDF</button>
+            <button class="btn btn-primary" onclick="exportWord()">📝 导出Word</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>产品信息填写</h2>
+                <p>填写左侧表单，右侧实时预览文档效果</p>
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="form-section">
+                <h3>一、基本信息</h3>
+                <div class="form-group">
+                    <label>产品名称</label>
+                    <input type="text" id="productName" placeholder="如：医用玻璃体温计" oninput="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>型号规格</label>
+                        <input type="text" id="model" placeholder="如：YG-01" oninput="updatePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label>产品分类</label>
+                        <select id="category" onchange="updatePreview()">
+                            <option value="第二类医疗器械">第二类医疗器械</option>
+                            <option value="第一类医疗器械">第一类医疗器械</option>
+                            <option value="第三类医疗器械">第三类医疗器械</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>注册证编号</label>
+                    <input type="text" id="regNumber" placeholder="如：浙械注准20242070XXX" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>结构组成</label>
+                    <textarea id="structure" placeholder="描述产品结构组成..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 适用范围 -->
+            <div class="form-section">
+                <h3>二、适用范围</h3>
+                <div class="form-group">
+                    <label>适用范围</label>
+                    <textarea id="scope" placeholder="描述产品适用范围..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>禁忌症</label>
+                    <textarea id="contraindications" placeholder="描述禁忌症..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 性能指标 -->
+            <div class="form-section">
+                <h3>三、性能指标</h3>
+                <div class="form-group">
+                    <label>外观</label>
+                    <textarea id="appearance" placeholder="描述外观要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>尺寸</label>
+                    <textarea id="dimensions" placeholder="描述尺寸要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>感温液</label>
+                    <textarea id="liquid" placeholder="描述感温液要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>测量范围</label>
+                    <input type="text" id="range" placeholder="如：35.0℃～42.0℃" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>示值误差</label>
+                    <input type="text" id="error" placeholder="如：±0.1℃" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                    <label>其他性能指标</label>
+                    <textarea id="otherPerformance" placeholder="其他性能指标..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 检验方法 -->
+            <div class="form-section">
+                <h3>四、检验方法</h3>
+                <div class="form-group">
+                    <label>外观检验</label>
+                    <textarea id="testAppearance" placeholder="描述外观检验方法..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>尺寸检验</label>
+                    <textarea id="testDimensions" placeholder="描述尺寸检验方法..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>性能检验</label>
+                    <textarea id="testPerformance" placeholder="描述性能检验方法..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>其他检验方法</label>
+                    <textarea id="otherTest" placeholder="其他检验方法..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 标志标签 -->
+            <div class="form-section">
+                <h3>五、标志、标签</h3>
+                <div class="form-group">
+                    <label>产品标志要求</label>
+                    <textarea id="marking" placeholder="描述产品标志要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>包装标签要求</label>
+                    <textarea id="packagingLabel" placeholder="描述包装标签要求..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 包装运输贮存 -->
+            <div class="form-section">
+                <h3>六、包装、运输、贮存</h3>
+                <div class="form-group">
+                    <label>包装要求</label>
+                    <textarea id="packaging" placeholder="描述包装要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>运输要求</label>
+                    <textarea id="transport" placeholder="描述运输要求..." oninput="updatePreview()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>贮存要求</label>
+                    <textarea id="storage" placeholder="描述贮存要求..." oninput="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <!-- 保存列表 -->
+            <div class="saved-list" id="savedList">
+                <h3>📁 已保存的产品</h3>
+                <div id="savedItems"></div>
+            </div>
+        </div>
+
+        <div class="preview-container">
+            <div class="preview-wrapper">
+                <div class="preview-content" id="previewContent">
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p>在左侧填写产品信息，右侧将实时预览文档效果</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 表单字段映射
+        const fieldLabels = {
+            productName: '产品名称',
+            model: '型号规格',
+            category: '产品分类',
+            regNumber: '注册证编号',
+            structure: '结构组成',
+            scope: '适用范围',
+            contraindications: '禁忌症',
+            appearance: '外观',
+            dimensions: '尺寸',
+            liquid: '感温液',
+            range: '测量范围',
+            error: '示值误差',
+            otherPerformance: '其他性能指标',
+            testAppearance: '外观检验',
+            testDimensions: '尺寸检验',
+            testPerformance: '性能检验',
+            otherTest: '其他检验方法',
+            marking: '产品标志要求',
+            packagingLabel: '包装标签要求',
+            packaging: '包装要求',
+            transport: '运输要求',
+            storage: '贮存要求'
+        };
+
+        // 获取所有表单数据
+        function getFormData() {
+            const data = {};
+            for (const fieldId of Object.keys(fieldLabels)) {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    data[fieldId] = element.value;
+                }
+            }
+            return data;
+        }
+
+        // 更新预览
+        function updatePreview() {
+            const data = getFormData();
+            const preview = document.getElementById('previewContent');
+
+            // 检查是否有内容
+            const hasContent = Object.values(data).some(v => v.trim() !== '');
+            if (!hasContent) {
+                preview.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p>在左侧填写产品信息，右侧将实时预览文档效果</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            // 标题
+            html += `<h1>${data.productName || '产品名称'}</h1>`;
+            html += `<h1 style="font-size: 18px; margin-bottom: 20px;">产品技术要求</h1>`;
+
+            // 基本信息表格
+            html += `<h2>一、基本信息</h2>`;
+            html += `<table>
+                <tr><th style="width: 120px;">产品名称</th><td>${data.productName || '-'}</td></tr>
+                <tr><th>型号规格</th><td>${data.model || '-'}</td></tr>
+                <tr><th>产品分类</th><td>${data.category || '-'}</td></tr>
+                <tr><th>注册证编号</th><td>${data.regNumber || '-'}</td></tr>
+            </table>`;
+
+            if (data.structure) {
+                html += `<h3>结构组成</h3>`;
+                html += `<p>${data.structure}</p>`;
+            }
+
+            // 适用范围
+            if (data.scope || data.contraindications) {
+                html += `<h2>二、适用范围</h2>`;
+                if (data.scope) {
+                    html += `<p>${data.scope}</p>`;
+                }
+                if (data.contraindications) {
+                    html += `<h3>禁忌症</h3>`;
+                    html += `<p>${data.contraindications}</p>`;
+                }
+            }
+
+            // 性能指标
+            const performanceFields = ['appearance', 'dimensions', 'liquid', 'range', 'error', 'otherPerformance'];
+            const hasPerformance = performanceFields.some(f => data[f]);
+            if (hasPerformance) {
+                html += `<h2>三、性能指标</h2>`;
+                html += `<table>
+                    <tr><th style="width: 120px;">外观</th><td>${data.appearance || '-'}</td></tr>
+                    <tr><th>尺寸</th><td>${data.dimensions || '-'}</td></tr>
+                    <tr><th>感温液</th><td>${data.liquid || '-'}</td></tr>
+                    <tr><th>测量范围</th><td>${data.range || '-'}</td></tr>
+                    <tr><th>示值误差</th><td>${data.error || '-'}</td></tr>
+                </table>`;
+                if (data.otherPerformance) {
+                    html += `<p>${data.otherPerformance}</p>`;
+                }
+            }
+
+            // 检验方法
+            const testFields = ['testAppearance', 'testDimensions', 'testPerformance', 'otherTest'];
+            const hasTest = testFields.some(f => data[f]);
+            if (hasTest) {
+                html += `<h2>四、检验方法</h2>`;
+                html += `<table>
+                    <tr><th style="width: 120px;">外观检验</th><td>${data.testAppearance || '-'}</td></tr>
+                    <tr><th>尺寸检验</th><td>${data.testDimensions || '-'}</td></tr>
+                    <tr><th>性能检验</th><td>${data.testPerformance || '-'}</td></tr>
+                </table>`;
+                if (data.otherTest) {
+                    html += `<p>${data.otherTest}</p>`;
+                }
+            }
+
+            // 标志标签
+            if (data.marking || data.packagingLabel) {
+                html += `<h2>五、标志、标签</h2>`;
+                if (data.marking) {
+                    html += `<h3>产品标志要求</h3>`;
+                    html += `<p>${data.marking}</p>`;
+                }
+                if (data.packagingLabel) {
+                    html += `<h3>包装标签要求</h3>`;
+                    html += `<p>${data.packagingLabel}</p>`;
+                }
+            }
+
+            // 包装运输贮存
+            if (data.packaging || data.transport || data.storage) {
+                html += `<h2>六、包装、运输、贮存</h2>`;
+                html += `<table>
+                    <tr><th style="width: 120px;">包装要求</th><td>${data.packaging || '-'}</td></tr>
+                    <tr><th>运输要求</th><td>${data.transport || '-'}</td></tr>
+                    <tr><th>贮存要求</th><td>${data.storage || '-'}</td></tr>
+                </table>`;
+            }
+
+            preview.innerHTML = html;
+        }
+
+        // 保存数据
+        function saveData() {
+            const data = getFormData();
+            if (!data.productName) {
+                alert('请输入产品名称');
+                return;
+            }
+
+            const saved = JSON.parse(localStorage.getItem('productRequirements') || '[]');
+            const existingIndex = saved.findIndex(item => item.productName === data.productName);
+
+            const saveItem = {
+                ...data,
+                savedAt: new Date().toISOString()
+            };
+
+            if (existingIndex >= 0) {
+                saved[existingIndex] = saveItem;
+            } else {
+                saved.push(saveItem);
+            }
+
+            localStorage.setItem('productRequirements', JSON.stringify(saved));
+            loadSavedList();
+            alert('保存成功！');
+        }
+
+        // 加载保存列表
+        function loadSavedList() {
+            const saved = JSON.parse(localStorage.getItem('productRequirements') || '[]');
+            const container = document.getElementById('savedItems');
+
+            if (saved.length === 0) {
+                container.innerHTML = '<p style="color: #9ca3af; font-size: 13px;">暂无保存的产品</p>';
+                return;
+            }
+
+            container.innerHTML = saved.map((item, index) => `
+                <div class="saved-item">
+                    <div>
+                        <div class="saved-item-name">${item.productName}</div>
+                        <div class="saved-item-date">${new Date(item.savedAt).toLocaleString()}</div>
+                    </div>
+                    <div class="saved-item-actions">
+                        <button class="load-btn" onclick="loadData(${index})">加载</button>
+                        <button class="delete-btn" onclick="deleteData(${index})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 加载数据
+        function loadData(index) {
+            const saved = JSON.parse(localStorage.getItem('productRequirements') || '[]');
+            const item = saved[index];
+            if (!item) return;
+
+            for (const [fieldId, value] of Object.entries(item)) {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.value = value;
+                }
+            }
+
+            updatePreview();
+        }
+
+        // 删除数据
+        function deleteData(index) {
+            if (!confirm('确定要删除这个产品吗？')) return;
+
+            const saved = JSON.parse(localStorage.getItem('productRequirements') || '[]');
+            saved.splice(index, 1);
+            localStorage.setItem('productRequirements', JSON.stringify(saved));
+            loadSavedList();
+        }
+
+        // 导出PDF
+        function exportPDF() {
+            const element = document.getElementById('previewContent');
+            const productName = document.getElementById('productName').value || '产品技术要求';
+
+            const opt = {
+                margin: 1,
+                filename: `${productName}_技术要求.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // 导出Word
+        async function exportWord() {
+            const data = getFormData();
+            const productName = data.productName || '产品技术要求';
+
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+                    HeadingLevel, AlignmentType, WidthType, BorderStyle } = docx;
+
+            const children = [];
+
+            // 标题
+            children.push(new Paragraph({
+                children: [new TextRun({ text: productName, bold: true, size: 32 })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 }
+            }));
+
+            children.push(new Paragraph({
+                children: [new TextRun({ text: '产品技术要求', bold: true, size: 28 })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 }
+            }));
+
+            // 辅助函数：创建表格行
+            const createRow = (label, value) => {
+                return new TableRow({
+                    children: [
+                        new TableCell({
+                            children: [new Paragraph({ children: [new TextRun({ text: label, bold: true })] })],
+                            width: { size: 20, type: WidthType.PERCENTAGE }
+                        }),
+                        new TableCell({
+                            children: [new Paragraph({ children: [new TextRun({ text: value || '-' })] })],
+                            width: { size: 80, type: WidthType.PERCENTAGE }
+                        })
+                    ]
+                });
+            };
+
+            // 辅助函数：创建章节标题
+            const createHeading = (text) => {
+                return new Paragraph({
+                    children: [new TextRun({ text, bold: true, size: 24 })],
+                    spacing: { before: 300, after: 150 }
+                });
+            };
+
+            // 辅助函数：创建段落
+            const createParagraph = (text) => {
+                return new Paragraph({
+                    children: [new TextRun({ text })],
+                    spacing: { after: 100 }
+                });
+            };
+
+            // 一、基本信息
+            children.push(createHeading('一、基本信息'));
+            children.push(new Table({
+                rows: [
+                    createRow('产品名称', data.productName),
+                    createRow('型号规格', data.model),
+                    createRow('产品分类', data.category),
+                    createRow('注册证编号', data.regNumber)
+                ],
+                width: { size: 100, type: WidthType.PERCENTAGE }
+            }));
+
+            if (data.structure) {
+                children.push(createHeading('结构组成'));
+                children.push(createParagraph(data.structure));
+            }
+
+            // 二、适用范围
+            if (data.scope || data.contraindications) {
+                children.push(createHeading('二、适用范围'));
+                if (data.scope) children.push(createParagraph(data.scope));
+                if (data.contraindications) {
+                    children.push(createHeading('禁忌症'));
+                    children.push(createParagraph(data.contraindications));
+                }
+            }
+
+            // 三、性能指标
+            const performanceFields = ['appearance', 'dimensions', 'liquid', 'range', 'error'];
+            const hasPerformance = performanceFields.some(f => data[f]) || data.otherPerformance;
+            if (hasPerformance) {
+                children.push(createHeading('三、性能指标'));
+                children.push(new Table({
+                    rows: [
+                        createRow('外观', data.appearance),
+                        createRow('尺寸', data.dimensions),
+                        createRow('感温液', data.liquid),
+                        createRow('测量范围', data.range),
+                        createRow('示值误差', data.error)
+                    ],
+                    width: { size: 100, type: WidthType.PERCENTAGE }
+                }));
+                if (data.otherPerformance) children.push(createParagraph(data.otherPerformance));
+            }
+
+            // 四、检验方法
+            const testFields = ['testAppearance', 'testDimensions', 'testPerformance'];
+            const hasTest = testFields.some(f => data[f]) || data.otherTest;
+            if (hasTest) {
+                children.push(createHeading('四、检验方法'));
+                children.push(new Table({
+                    rows: [
+                        createRow('外观检验', data.testAppearance),
+                        createRow('尺寸检验', data.testDimensions),
+                        createRow('性能检验', data.testPerformance)
+                    ],
+                    width: { size: 100, type: WidthType.PERCENTAGE }
+                }));
+                if (data.otherTest) children.push(createParagraph(data.otherTest));
+            }
+
+            // 五、标志、标签
+            if (data.marking || data.packagingLabel) {
+                children.push(createHeading('五、标志、标签'));
+                if (data.marking) {
+                    children.push(createHeading('产品标志要求'));
+                    children.push(createParagraph(data.marking));
+                }
+                if (data.packagingLabel) {
+                    children.push(createHeading('包装标签要求'));
+                    children.push(createParagraph(data.packagingLabel));
+                }
+            }
+
+            // 六、包装、运输、贮存
+            if (data.packaging || data.transport || data.storage) {
+                children.push(createHeading('六、包装、运输、贮存'));
+                children.push(new Table({
+                    rows: [
+                        createRow('包装要求', data.packaging),
+                        createRow('运输要求', data.transport),
+                        createRow('贮存要求', data.storage)
+                    ],
+                    width: { size: 100, type: WidthType.PERCENTAGE }
+                }));
+            }
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children
+                }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${productName}_技术要求.docx`);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedList();
+        });
+    </script>
+</body>
+</html>
