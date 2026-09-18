@@ -961,8 +961,8 @@
             { id: 'GB/T 19633.1-2015', title: '最终灭菌医疗器械包装 第1部分：材料、无菌屏障系统和包装系统的要求', keywords: ['包装', '无菌', '材料'] },
         ];
 
-        // 搜索适用标准
-        function searchStandards() {
+                // 搜索适用标准（使用Playwright实时查询）
+        async function searchStandards() {
             const data = getFormData();
             const resultDiv = document.getElementById('standardsResult');
 
@@ -976,138 +976,112 @@
                 data.liquid,
                 data.range,
                 data.error
-            ].filter(Boolean).join(' ').toLowerCase();
+            ].filter(Boolean).join(' ');
 
             if (!searchText.trim()) {
                 resultDiv.innerHTML = '<p style="color: #f59e0b; font-size: 13px;">⚠️ 请先填写产品信息</p>';
                 return;
             }
 
-            // 匹配标准
-            const matched = [];
-            const keywords = searchText.split(/\s+/).filter(k => k.length > 1);
-
-                        for (const std of standardsDB) {
-                let score = 0;
-                const stdText = (std.id + ' ' + std.title + ' ' + std.keywords.join(' ')).toLowerCase();
-
-                // 关键词匹配
-                for (const kw of keywords) {
-                    if (stdText.includes(kw)) {
-                        score += 2;
-                    }
-                }
-
-                // 标准关键词匹配
-                for (const stdKw of std.keywords) {
-                    if (searchText.includes(stdKw)) {
-                        score += 3;
-                    }
-                }
-
-                // 标准类型优先级加分（上位法 > 国家强制标准 > ISO > 行业强制标准 > 推荐标准）
-                if (std.id.startsWith('法律') || std.id.startsWith('条例') || std.id.startsWith('办法')) {
-                    score += 100;  // 法律法规最高优先级
-                } else if (/^GB \d/.test(std.id)) {
-                    score += 80;   // 国家强制标准
-                } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
-                    score += 60;   // 国际标准
-                } else if (/^YY \d/.test(std.id)) {
-                    score += 40;   // 行业强制标准
-                } else if (std.id.startsWith('GB/T')) {
-                    score += 20;   // 国家推荐标准
-                } else if (std.id.startsWith('YY/T')) {
-                    score += 10;   // 行业推荐标准
-                }
-
-                if (score > 0) {
-                    matched.push({ ...std, score });
-                }
-            }
-
-            // 按匹配度+标准类型优先级排序
-            matched.sort((a, b) => b.score - a.score);
-
-            // 显示结果
-            if (matched.length === 0) {
-                resultDiv.innerHTML = `
-                    <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
-                        <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
-                        <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
-                            尝试搜索：
-                            <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
-                               target="_blank" 
-                               style="color: #3b82f6;">
-                                百度搜索 "${data.productName} 标准"
-                            </a>
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
-            // 最多显示10个
-            const displayList = matched.slice(0, 10);
-
-            let html = `
-                <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
-                    <p style="color: #16a34a; font-size: 13px; font-weight: 500;">
-                        ✅ 找到 ${matched.length} 个相关标准（显示前 ${displayList.length} 个）
+            // 显示加载状态
+            resultDiv.innerHTML = `
+                <div style="background: #f0f9ff; padding: 12px; border-radius: 6px;">
+                    <p style="color: #0369a1; font-size: 13px;">
+                        🔄 正在查询全国标准信息公共服务平台...
+                    </p>
+                    <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                        搜索关键词：${data.productName || '医疗器械'}
                     </p>
                 </div>
             `;
 
-                        for (const std of displayList) {
-                // 根据标准类型生成不同的查看链接
-                let viewUrl = '';
-                if (std.id.startsWith('GB')) {
-                    // 国家标准：使用国家标准全文公开系统
-                    viewUrl = `https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=${encodeURIComponent(std.id)}`;
-                } else if (std.id.startsWith('YY')) {
-                    // 行业标准：使用工标网
-                    viewUrl = `https://www.csres.com/sousuo.html?q=${encodeURIComponent(std.id)}`;
-                } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
-                    // 国际标准：使用百度搜索
-                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
-                } else {
-                    // 其他标准：使用百度搜索
-                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
-                }
+            try {
+                // 调用后端API
+                const response = await fetch(`http://localhost:8000/api/search?keyword=${encodeURIComponent(data.productName || '医疗器械')}`);
+                const result = await response.json();
 
-                html += `
-                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
-                        <div style="font-weight: 600; color: #374151; font-size: 13px;">
-                            <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
-                            <span style="font-size: 11px; color: #9ca3af; margin-left: 6px;">点击查看 →</span>
+                if (result.results && result.results.length > 0) {
+                    let html = `
+                        <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <p style="color: #16a34a; font-size: 13px; font-weight: 500;">
+                                ✅ 找到 ${result.count} 个相关标准
+                            </p>
+                            <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                                数据来源：全国标准信息公共服务平台（实时查询）
+                            </p>
                         </div>
-                        <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
-                        <div style="margin-top: 6px;">
-                            ${std.keywords.map(kw => `<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">${kw}</span>`).join('')}
+                    `;
+
+                    for (const std of result.results) {
+                        // 生成查看链接
+                        let viewUrl = std.url || `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(std.id)}`;
+                        
+                        html += `
+                            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
+                                <div style="font-weight: 600; color: #374151; font-size: 13px;">
+                                    <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
+                                    ${std.status ? `<span style="background: ${std.status.includes('现行') ? '#dcfce7' : '#fef3c7'}; color: ${std.status.includes('现行') ? '#166534' : '#92400e'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px;">${std.status}</span>` : ''}
+                                </div>
+                                <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
+                                ${std.date ? `<div style="color: #9ca3af; font-size: 11px; margin-top: 4px;">${std.date}</div>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    // 添加更多搜索链接
+                    html += `
+                        <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                            <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
+                            <div style="margin-top: 6px;">
+                                <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
+                                   target="_blank" 
+                                   style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
+                                    🔍 百度搜索
+                                </a>
+                                <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                                   target="_blank" 
+                                   style="color: #3b82f6; font-size: 12px;">
+                                    📚 全国标准信息公共服务平台
+                                </a>
+                            </div>
                         </div>
+                    `;
+
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
+                            <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
+                            <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
+                                尝试搜索：
+                                <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
+                                   target="_blank" 
+                                   style="color: #3b82f6;">
+                                    百度搜索 "${data.productName} 标准"
+                                </a>
+                            </p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('搜索出错:', error);
+                resultDiv.innerHTML = `
+                    <div style="background: #fef2f2; padding: 12px; border-radius: 6px;">
+                        <p style="color: #dc2626; font-size: 13px;">❌ 搜索失败：${error.message}</p>
+                        <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">
+                            请确保后端服务已启动（python standard_search_server.py）
+                        </p>
+                        <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                            或者直接访问：
+                            <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                               target="_blank" 
+                               style="color: #3b82f6;">
+                                全国标准信息公共服务平台
+                            </a>
+                        </p>
                     </div>
                 `;
             }
-
-            // 添加搜索更多链接
-            html += `
-                <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                    <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
-                    <div style="margin-top: 6px;">
-                        <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
-                           target="_blank" 
-                           style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
-                            🔍 百度搜索
-                        </a>
-                        <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
-                           target="_blank" 
-                           style="color: #3b82f6; font-size: 12px;">
-                            📚 国家标准全文公开系统
-                        </a>
-                    </div>
-                </div>
-            `;
-
-            resultDiv.innerHTML = html;
         }
 
         // 初始化
