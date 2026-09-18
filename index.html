@@ -1047,13 +1047,33 @@
                 console.log('CORS代理查询失败，使用本地数据库:', error);
             }
 
-                        // 方案2：回退到本地数据库智能匹配
-            const keywords = searchText.toLowerCase().split(/\s+/).filter(k => k.length > 1);
+                                    // 方案2：回退到本地数据库智能匹配
+            const searchTextLower = searchText.toLowerCase();
+            const keywords = searchTextLower.split(/\s+/).filter(k => k.length > 1);
             const matched = [];
+
+            // 检测产品类型
+            const isThermometer = searchTextLower.includes('体温计') || searchTextLower.includes('温度计');
+            const isIVD = searchTextLower.includes('体外诊断') || searchTextLower.includes('ivd') || searchTextLower.includes('试剂');
 
             for (const std of standardsDB) {
                 let score = 0;
                 const stdText = (std.id + ' ' + std.title + ' ' + std.keywords.join(' ')).toLowerCase();
+                const stdTitleLower = std.title.toLowerCase();
+
+                // 产品类型过滤：体温计标准只在搜索体温计时出现
+                if (stdTitleLower.includes('体温计') && !isThermometer) {
+                    continue;  // 跳过体温计相关标准
+                }
+                // 体外诊断标准只在搜索体外诊断时出现
+                if ((stdTitleLower.includes('体外诊断') || stdTitleLower.includes('ivd')) && !isIVD) {
+                    continue;  // 跳过体外诊断相关标准
+                }
+
+                // 精确匹配加分（产品名称完全匹配）
+                if (stdTitleLower.includes(searchTextLower)) {
+                    score += 50;  // 标题包含搜索词
+                }
 
                 // 关键词匹配
                 for (const kw of keywords) {
@@ -1064,7 +1084,7 @@
 
                 // 标准关键词匹配
                 for (const stdKw of std.keywords) {
-                    if (searchText.toLowerCase().includes(stdKw)) {
+                    if (searchTextLower.includes(stdKw)) {
                         score += 3;
                     }
                 }
