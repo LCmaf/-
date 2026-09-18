@@ -970,7 +970,7 @@
             { id: 'WS/T 407-2012', title: '临床化学检验血液标本的处理', keywords: ['临床检验', '血液', '处理'] },
         ];
 
-                        // 搜索适用标准（优先实时查询，回退到本地智能匹配）
+                                // 搜索适用标准（纯前端方案，无需后端）
         async function searchStandards() {
             const data = getFormData();
             const resultDiv = document.getElementById('standardsResult');
@@ -996,7 +996,7 @@
             resultDiv.innerHTML = `
                 <div style="background: #f0f9ff; padding: 12px; border-radius: 6px;">
                     <p style="color: #0369a1; font-size: 13px;">
-                        🔄 正在查询全国标准信息公共服务平台...
+                        🔄 正在查询标准信息...
                     </p>
                     <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
                         搜索关键词：${data.productName || '医疗器械'}
@@ -1005,67 +1005,49 @@
             `;
 
             try {
-                // 尝试调用后端API
-                const response = await fetch(`http://localhost:8000/api/search?keyword=${encodeURIComponent(data.productName || '医疗器械')}`, {
-                    signal: AbortSignal.timeout(5000) // 5秒超时
+                // 方案1：尝试通过CORS代理查询全国标准信息公共服务平台
+                const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                const targetUrl = `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName || '医疗器械')}`;
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+                    signal: AbortSignal.timeout(8000) // 8秒超时
                 });
-                const result = await response.json();
-
-                if (result.results && result.results.length > 0) {
-                    let html = `
-                        <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
-                            <p style="color: #16a34a; font-size: 13px; font-weight: 500;">
-                                ✅ 找到 ${result.count} 个相关标准
-                            </p>
-                            <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
-                                数据来源：全国标准信息公共服务平台（实时查询）
-                            </p>
-                        </div>
-                    `;
-
-                    for (const std of result.results) {
-                        // 生成查看链接
-                        let viewUrl = std.url || `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(std.id)}`;
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    // 解析HTML提取标准信息
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // 尝试提取搜索结果
+                    const results = [];
+                    const items = doc.querySelectorAll('.result-item, .std-item, .search-result-item');
+                    
+                    items.forEach(item => {
+                        const stdId = item.querySelector('.std-id, .standard-id, a')?.textContent?.trim() || '';
+                        const stdName = item.querySelector('.std-name, .standard-name, .title')?.textContent?.trim() || '';
+                        const status = item.querySelector('.status, .std-status')?.textContent?.trim() || '';
                         
-                        html += `
-                            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
-                                <div style="font-weight: 600; color: #374151; font-size: 13px;">
-                                    <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
-                                    ${std.status ? `<span style="background: ${std.status.includes('现行') ? '#dcfce7' : '#fef3c7'}; color: ${std.status.includes('现行') ? '#166534' : '#92400e'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px;">${std.status}</span>` : ''}
-                                </div>
-                                <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
-                                ${std.date ? `<div style="color: #9ca3af; font-size: 11px; margin-top: 4px;">${std.date}</div>` : ''}
-                            </div>
-                        `;
+                        if (stdId || stdName) {
+                            results.push({
+                                id: stdId,
+                                title: stdName,
+                                status: status,
+                                url: `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(stdId)}`
+                            });
+                        }
+                    });
+
+                    if (results.length > 0) {
+                        displaySearchResults(results, '全国标准信息公共服务平台（实时查询）');
+                        return;
                     }
-
-                    // 添加更多搜索链接
-                    html += `
-                        <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                            <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
-                            <div style="margin-top: 6px;">
-                                <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
-                                   target="_blank" 
-                                   style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
-                                    🔍 百度搜索
-                                </a>
-                                <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
-                                   target="_blank" 
-                                   style="color: #3b82f6; font-size: 12px;">
-                                    📚 全国标准信息公共服务平台
-                                </a>
-                            </div>
-                        </div>
-                    `;
-
-                    resultDiv.innerHTML = html;
-                    return; // 成功获取实时数据，直接返回
                 }
             } catch (error) {
-                console.log('实时查询失败，回退到本地匹配:', error.message);
+                console.log('CORS代理查询失败，使用本地数据库:', error);
             }
 
-            // 回退：使用本地数据库进行智能匹配
+                        // 方案2：回退到本地数据库智能匹配
             const keywords = searchText.toLowerCase().split(/\s+/).filter(k => k.length > 1);
             const matched = [];
 
@@ -1088,18 +1070,18 @@
                 }
 
                 // 标准类型优先级加分
-                if (std.id.startsWith('法律') || std.id.startsWith('条例') || std.id.startsWith('办法')) {
-                    score += 100;
+                if (std.id.startsWith('医疗器械') || std.id.startsWith('体外诊断')) {
+                    score += 100;  // 法规最高优先级
                 } else if (/^GB \d/.test(std.id)) {
-                    score += 80;
+                    score += 80;   // 国家强制标准
                 } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
-                    score += 60;
+                    score += 60;   // 国际标准
                 } else if (/^YY \d/.test(std.id)) {
-                    score += 40;
+                    score += 40;   // 行业强制标准
                 } else if (std.id.startsWith('GB/T')) {
-                    score += 20;
+                    score += 20;   // 国家推荐标准
                 } else if (std.id.startsWith('YY/T')) {
-                    score += 10;
+                    score += 10;   // 行业推荐标准
                 }
 
                 if (score > 0) {
@@ -1110,8 +1092,9 @@
             // 按匹配度排序
             matched.sort((a, b) => b.score - a.score);
 
-            // 显示结果
-            if (matched.length === 0) {
+            if (matched.length > 0) {
+                displaySearchResults(matched.slice(0, 10), '本地数据库匹配');
+            } else {
                 resultDiv.innerHTML = `
                     <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
                         <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
@@ -1125,43 +1108,34 @@
                         </p>
                     </div>
                 `;
-                return;
             }
+        }
 
-            // 最多显示10个
-            const displayList = matched.slice(0, 10);
-
+        // 显示搜索结果
+        function displaySearchResults(results, source) {
+            const resultDiv = document.getElementById('standardsResult');
+            
             let html = `
-                <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
-                    <p style="color: #92400e; font-size: 13px; font-weight: 500;">
-                        ⚠️ 使用本地数据库匹配（后端服务未启动）
+                <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                    <p style="color: #16a34a; font-size: 13px; font-weight: 500;">
+                        ✅ 找到 ${results.length} 个相关标准
                     </p>
                     <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
-                        找到 ${matched.length} 个相关标准（显示前 ${displayList.length} 个）
+                        数据来源：${source}
                     </p>
                 </div>
             `;
 
-            for (const std of displayList) {
-                let viewUrl = '';
-                if (std.id.startsWith('GB')) {
-                    viewUrl = `https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=${encodeURIComponent(std.id)}`;
-                } else if (std.id.startsWith('YY')) {
-                    viewUrl = `https://www.csres.com/sousuo.html?q=${encodeURIComponent(std.id)}`;
-                } else {
-                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
-                }
-
+            for (const std of results) {
+                const viewUrl = std.url || `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(std.id)}`;
+                
                 html += `
                     <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
                         <div style="font-weight: 600; color: #374151; font-size: 13px;">
                             <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
-                            <span style="font-size: 11px; color: #9ca3af; margin-left: 6px;">点击查看 →</span>
+                            ${std.status ? `<span style="background: ${std.status.includes('现行') ? '#dcfce7' : '#fef3c7'}; color: ${std.status.includes('现行') ? '#166534' : '#92400e'}; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px;">${std.status}</span>` : ''}
                         </div>
                         <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
-                        <div style="margin-top: 6px;">
-                            ${std.keywords.slice(0, 5).map(kw => `<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">${kw}</span>`).join('')}
-                        </div>
                     </div>
                 `;
             }
@@ -1171,21 +1145,21 @@
                 <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
                     <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
                     <div style="margin-top: 6px;">
-                        <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
+                        <a href="https://www.baidu.com/s?wd=${encodeURIComponent(document.getElementById('productName').value + ' 医疗器械 国家标准 行业标准')}" 
                            target="_blank" 
                            style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
                             🔍 百度搜索
                         </a>
-                        <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                        <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(document.getElementById('productName').value)}" 
                            target="_blank" 
                            style="color: #3b82f6; font-size: 12px;">
-                            📚 全国标准信息公共服务平台
+                            📚 国家标准全文公开系统
                         </a>
                     </div>
                 </div>
             `;
 
-            resultDiv.innerHTML = html;
+                        resultDiv.innerHTML = html;
         }
 
         // 初始化
