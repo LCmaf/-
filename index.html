@@ -996,8 +996,8 @@
             { id: 'YY/T 0842-2011', title: '医用内窥镜 摄像系统 光学性能及测试方法', keywords: ['内窥镜', '摄像', '光学', '测试'] },
         ];
 
-                                // 搜索适用标准（纯前端方案，无需后端）
-        async function searchStandards() {
+                                        // 搜索适用标准（本地数据库 + 在线查询入口）
+        function searchStandards() {
             const data = getFormData();
             const resultDiv = document.getElementById('standardsResult');
 
@@ -1018,60 +1018,70 @@
                 return;
             }
 
-            // 显示加载状态
-            resultDiv.innerHTML = `
-                <div style="background: #f0f9ff; padding: 12px; border-radius: 6px;">
-                    <p style="color: #0369a1; font-size: 13px;">
-                        🔄 正在查询标准信息...
-                    </p>
-                    <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
-                        搜索关键词：${data.productName || '医疗器械'}
-                    </p>
-                </div>
-            `;
+            // 直接使用本地数据库智能匹配
+            const searchTextLower = searchText.toLowerCase();
+            const keywords = searchTextLower.split(/\s+/).filter(k => k.length > 1);
+            const matched = [];
 
-            try {
-                // 方案1：尝试通过CORS代理查询全国标准信息公共服务平台
-                const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                const targetUrl = `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName || '医疗器械')}`;
-                
-                const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-                    signal: AbortSignal.timeout(8000) // 8秒超时
-                });
-                
-                if (response.ok) {
-                    const html = await response.text();
-                    // 解析HTML提取标准信息
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // 尝试提取搜索结果
-                    const results = [];
-                    const items = doc.querySelectorAll('.result-item, .std-item, .search-result-item');
-                    
-                    items.forEach(item => {
-                        const stdId = item.querySelector('.std-id, .standard-id, a')?.textContent?.trim() || '';
-                        const stdName = item.querySelector('.std-name, .standard-name, .title')?.textContent?.trim() || '';
-                        const status = item.querySelector('.status, .std-status')?.textContent?.trim() || '';
-                        
-                        if (stdId || stdName) {
-                            results.push({
-                                id: stdId,
-                                title: stdName,
-                                status: status,
-                                url: `https://std.samr.gov.cn/search/std?q=${encodeURIComponent(stdId)}`
-                            });
-                        }
-                    });
+            // 检测产品类型
+            const isThermometer = searchTextLower.includes('体温计') || searchTextLower.includes('温度计');
+            const isIVD = searchTextLower.includes('体外诊断') || searchTextLower.includes('ivd') || searchTextLower.includes('试剂');
+            const isEndoscope = searchTextLower.includes('内窥镜');
 
-                    if (results.length > 0) {
-                        displaySearchResults(results, '全国标准信息公共服务平台（实时查询）');
-                        return;
+            for (const std of standardsDB) {
+                let score = 0;
+                const stdText = (std.id + ' ' + std.title + ' ' + std.keywords.join(' ')).toLowerCase();
+                const stdTitleLower = std.title.toLowerCase();
+
+                // 产品类型过滤
+                if (stdTitleLower.includes('体温计') && !isThermometer) continue;
+                if ((stdTitleLower.includes('体外诊断') || stdTitleLower.includes('ivd')) && !isIVD) continue;
+                if (stdTitleLower.includes('内窥镜') && !isEndoscope) continue;
+
+                // 精确匹配加分
+                if (stdTitleLower.includes(searchTextLower)) {
+                    score += 50;
+                }
+
+                // 关键词匹配
+                for (const kw of keywords) {
+                    if (stdText.includes(kw)) {
+                        score += 2;
                     }
                 }
-            } catch (error) {
-                console.log('CORS代理查询失败，使用本地数据库:', error);
+
+                // 标准关键词匹配
+                for (const stdKw of std.keywords) {
+                    if (searchTextLower.includes(stdKw)) {
+                        score += 3;
+                    }
+                }
+
+                // 标准类型优先级加分
+                if (std.id.startsWith('医疗器械') || std.id.startsWith('体外诊断')) {
+                    score += 100;
+                } else if (/^GB \d/.test(std.id)) {
+                    score += 80;
+                } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
+                    score += 60;
+                } else if (/^YY \d/.test(std.id)) {
+                    score += 40;
+                } else if (std.id.startsWith('GB/T')) {
+                    score += 20;
+                } else if (std.id.startsWith('YY/T')) {
+                    score += 10;
+                }
+
+                if (score > 0) {
+                    matched.push({ ...std, score });
+                }
             }
+
+            // 按匹配度排序
+            matched.sort((a, b) => b.score - a.score);
+
+            // 显示结果
+            displaySearchResults(matched.slice(0, 10), data.productName || '医疗器械');
 
                                     // 方案2：回退到本地数据库智能匹配
             const searchTextLower = searchText.toLowerCase();
@@ -1135,26 +1145,11 @@
                 }
             }
 
-            // 按匹配度排序
+                        // 按匹配度排序
             matched.sort((a, b) => b.score - a.score);
 
-            if (matched.length > 0) {
-                displaySearchResults(matched.slice(0, 10), '本地数据库匹配');
-            } else {
-                resultDiv.innerHTML = `
-                    <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
-                        <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
-                        <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
-                            尝试搜索：
-                            <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
-                               target="_blank" 
-                               style="color: #3b82f6;">
-                                百度搜索 "${data.productName} 标准"
-                            </a>
-                        </p>
-                    </div>
-                `;
-            }
+            // 显示结果
+            displaySearchResults(matched.slice(0, 10), data.productName || '医疗器械');
         }
 
         // 显示搜索结果
