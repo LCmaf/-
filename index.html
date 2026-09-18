@@ -81,13 +81,22 @@
             background: #d97706;
         }
 
-        .btn-danger {
+                .btn-danger {
             background: #ef4444;
             color: white;
         }
 
         .btn-danger:hover {
             background: #dc2626;
+        }
+
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2563eb;
         }
 
         .container {
@@ -484,6 +493,16 @@
                     <label>贮存要求</label>
                     <textarea id="storage" placeholder="描述贮存要求..." oninput="updatePreview()"></textarea>
                 </div>
+            </div>
+
+                        <!-- 适用标准搜索 -->
+            <div class="form-section">
+                <h3>🔍 适用标准搜索</h3>
+                <p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">根据产品信息自动匹配相关标准</p>
+                <button class="btn btn-info" onclick="searchStandards()" style="width: 100%; justify-content: center;">
+                    🔍 搜索适用标准
+                </button>
+                <div id="standardsResult" style="margin-top: 12px;"></div>
             </div>
 
             <!-- 保存列表 -->
@@ -899,6 +918,207 @@
 
             const blob = await Packer.toBlob(doc);
             saveAs(blob, `${productName}_技术要求.docx`);
+        }
+
+                // 医疗器械标准数据库
+        const standardsDB = [
+            // 通用标准
+            { id: 'YY/T 0466.1-2009', title: '医疗器械 用于医疗器械标签、标记和提供信息的符号 第1部分：通用要求', keywords: ['标签', '标记', '符号', '通用'] },
+            { id: 'YY/T 0466.2-2015', title: '医疗器械 用于医疗器械标签、标记和提供信息的符号 第2部分：符号的制定、形成和确认', keywords: ['标签', '标记', '符号'] },
+            { id: 'GB/T 16886.1-2011', title: '医疗器械生物学评价 第1部分：风险管理过程中的评价与试验', keywords: ['生物学', '生物相容性', '风险'] },
+            { id: 'GB/T 16886.5-2017', title: '医疗器械生物学评价 第5部分：体外细胞毒性试验', keywords: ['细胞毒性', '生物学'] },
+            { id: 'GB/T 16886.10-2017', title: '医疗器械生物学评价 第10部分：皮肤致敏试验', keywords: ['皮肤致敏', '生物学'] },
+            { id: 'GB/T 16886.11-2011', title: '医疗器械生物学评价 第11部分：全身毒性试验', keywords: ['全身毒性', '生物学'] },
+
+            // 电气安全标准
+            { id: 'GB 9706.1-2020', title: '医用电气设备 第1部分：基本安全和基本性能的通用要求', keywords: ['电气', '电气安全', '医用电气'] },
+            { id: 'GB 9706.1-2007', title: '医用电气设备 第1部分：安全通用要求', keywords: ['电气', '电气安全'] },
+            { id: 'YY 0505-2012', title: '医用电气设备 第1-2部分：安全通用要求 并列标准：电磁兼容 要求和试验', keywords: ['电磁兼容', 'EMC', '电气'] },
+
+            // 体温计专用标准
+            { id: 'GB/T 1588-2017', title: '玻璃体温计', keywords: ['体温计', '玻璃体温计', '温度', '测量'] },
+            { id: 'YY 91001-1999', title: '医用玻璃体温计', keywords: ['体温计', '医用', '玻璃'] },
+            { id: 'GB/T 21416-2008', title: '医用红外体温计', keywords: ['红外体温计', '体温计', '温度'] },
+
+            // 血压计标准
+            { id: 'GB/T 18830-2009', title: '血压计', keywords: ['血压计', '血压', '测量'] },
+            { id: 'YY 0664-2008', title: '无创自动测量血压计', keywords: ['血压计', '无创', '自动'] },
+
+            // 听诊器标准
+            { id: 'YY/T 0126-2007', title: '听诊器', keywords: ['听诊器', '听诊'] },
+
+            // 注射器标准
+            { id: 'GB 15810-2019', title: '一次性使用无菌注射器', keywords: ['注射器', '无菌', '一次性'] },
+            { id: 'GB 15811-2016', title: '一次性使用无菌注射针', keywords: ['注射针', '无菌', '一次性'] },
+
+            // 输液器标准
+            { id: 'GB 8368-2018', title: '一次性使用输液器 重力输液式', keywords: ['输液器', '一次性', '输液'] },
+            { id: 'GB 14232.1-2011', title: '人体血液及血液成分袋式塑料容器 第1部分：血液采集容器', keywords: ['血液', '容器', '采集'] },
+
+            // 手术器械标准
+            { id: 'GB/T 2766-2019', title: '外科手术器械 基本要求', keywords: ['手术器械', '外科', '器械'] },
+            { id: 'YY/T 0295-2016', title: '医用镊', keywords: ['镊', '手术器械'] },
+
+            // 消毒灭菌标准
+            { id: 'GB 15980-2012', title: '一次性使用医疗用品卫生标准', keywords: ['消毒', '灭菌', '卫生'] },
+            { id: 'GB 18279-2015', title: '医疗保健产品灭菌 环氧乙烷', keywords: ['灭菌', '环氧乙烷'] },
+            { id: 'GB 18280-2015', title: '医疗保健产品灭菌 辐射', keywords: ['灭菌', '辐射'] },
+
+            // 包装标准
+            { id: 'YY/T 0681.1-2009', title: '无菌医疗器械包装试验方法 第1部分：目力检验', keywords: ['包装', '无菌', '检验'] },
+            { id: 'YY/T 0681.2-2010', title: '无菌医疗器械包装试验方法 第2部分：成形密封', keywords: ['包装', '密封'] },
+
+            // 质量管理体系
+            { id: 'ISO 13485:2016', title: '医疗器械 质量管理体系 用于法规的要求', keywords: ['质量管理体系', 'ISO 13485', '法规'] },
+            { id: 'YY/T 0287-2017', title: '医疗器械 质量管理体系 用于法规的要求', keywords: ['质量管理体系', '法规'] },
+
+            // 风险管理
+            { id: 'ISO 14971:2019', title: '医疗器械 风险管理对医疗器械的应用', keywords: ['风险管理', '风险'] },
+            { id: 'YY/T 0316-2016', title: '医疗器械 风险管理对医疗器械的应用', keywords: ['风险管理', '风险'] },
+
+            // 软件标准
+            { id: 'YY/T 0664-2020', title: '医疗器械软件 软件生存周期过程', keywords: ['软件', '生命周期'] },
+            { id: 'YY/T 0869.1-2013', title: '医疗器械软件 医疗器械软件的完整性', keywords: ['软件', '完整性'] },
+
+            // 可用性标准
+            { id: 'IEC 62366-1:2015', title: '医疗器械 可用性工程对医疗器械的应用', keywords: ['可用性', '人因工程'] },
+
+            // 清洁度标准
+            { id: 'YY/T 0127.1-2014', title: '医疗器械生物学评价 第1部分：风险管理过程中的评价与试验', keywords: ['清洁', '残留'] },
+
+            // 稳定性标准
+            { id: 'YY/T 0681.3-2010', title: '无菌医疗器械包装试验方法 第3部分：无菌屏障系统', keywords: ['稳定性', '无菌屏障'] },
+
+            // 有源器械标准
+            { id: 'GB 9706.15-2008', title: '医用电气设备 第1-1部分：安全通用要求 并列标准：医用电气系统安全要求', keywords: ['有源', '电气系统'] },
+
+            // 植入器械标准
+            { id: 'GB/T 16886.3-2019', title: '医疗器械生物学评价 第3部分：遗传毒性、致癌性和生殖毒性试验', keywords: ['植入', '遗传毒性', '致癌'] },
+
+            // 体外诊断标准
+            { id: 'GB/T 19633.1-2015', title: '最终灭菌医疗器械包装 第1部分：材料、无菌屏障系统和包装系统的要求', keywords: ['体外诊断', '包装'] },
+            { id: 'YY/T 0588-2005', title: '体外诊断医疗器械 生物样品中量的测量 校准品和控制物质赋值的计量学溯源性', keywords: ['体外诊断', '溯源'] },
+
+            // 特定产品标准
+            { id: 'YY 0466-2003', title: '医疗器械 用于医疗器械标签、标记和提供信息的符号', keywords: ['标签', '标记'] },
+            { id: 'GB/T 14710-2009', title: '医用电器环境要求及试验方法', keywords: ['环境', '试验'] },
+            { id: 'GB/T 14233.1-2008', title: '医用输液、输血、注射器具检验方法 第1部分：化学分析方法', keywords: ['化学分析', '检验'] },
+            { id: 'GB/T 14233.2-2005', title: '医用输液、输血、注射器具检验方法 第2部分：生物学试验方法', keywords: ['生物学试验', '检验'] },
+        ];
+
+        // 搜索适用标准
+        function searchStandards() {
+            const data = getFormData();
+            const resultDiv = document.getElementById('standardsResult');
+
+            // 收集搜索关键词
+            const searchText = [
+                data.productName,
+                data.structure,
+                data.scope,
+                data.appearance,
+                data.dimensions,
+                data.liquid,
+                data.range,
+                data.error
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            if (!searchText.trim()) {
+                resultDiv.innerHTML = '<p style="color: #f59e0b; font-size: 13px;">⚠️ 请先填写产品信息</p>';
+                return;
+            }
+
+            // 匹配标准
+            const matched = [];
+            const keywords = searchText.split(/\s+/).filter(k => k.length > 1);
+
+            for (const std of standardsDB) {
+                let score = 0;
+                const stdText = (std.id + ' ' + std.title + ' ' + std.keywords.join(' ')).toLowerCase();
+
+                // 关键词匹配
+                for (const kw of keywords) {
+                    if (stdText.includes(kw)) {
+                        score += 2;
+                    }
+                }
+
+                // 标准关键词匹配
+                for (const stdKw of std.keywords) {
+                    if (searchText.includes(stdKw)) {
+                        score += 3;
+                    }
+                }
+
+                if (score > 0) {
+                    matched.push({ ...std, score });
+                }
+            }
+
+            // 按匹配度排序
+            matched.sort((a, b) => b.score - a.score);
+
+            // 显示结果
+            if (matched.length === 0) {
+                resultDiv.innerHTML = `
+                    <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
+                        <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
+                            尝试搜索：
+                            <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
+                               target="_blank" 
+                               style="color: #3b82f6;">
+                                百度搜索 "${data.productName} 标准"
+                            </a>
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 最多显示10个
+            const displayList = matched.slice(0, 10);
+
+            let html = `
+                <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                    <p style="color: #16a34a; font-size: 13px; font-weight: 500;">
+                        ✅ 找到 ${matched.length} 个相关标准（显示前 ${displayList.length} 个）
+                    </p>
+                </div>
+            `;
+
+            for (const std of displayList) {
+                html += `
+                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+                        <div style="font-weight: 600; color: #374151; font-size: 13px;">${std.id}</div>
+                        <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
+                        <div style="margin-top: 6px;">
+                            ${std.keywords.map(kw => `<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">${kw}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 添加搜索更多链接
+            html += `
+                <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                    <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
+                    <div style="margin-top: 6px;">
+                        <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
+                           target="_blank" 
+                           style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
+                            🔍 百度搜索
+                        </a>
+                        <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                           target="_blank" 
+                           style="color: #3b82f6; font-size: 12px;">
+                            📚 国家标准全文公开系统
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = html;
         }
 
         // 初始化
