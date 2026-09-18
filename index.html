@@ -920,37 +920,41 @@
             saveAs(blob, `${productName}_技术要求.docx`);
         }
 
-                                // 医疗器械标准数据库（仅保留适用于体温计的标准）
+                                        // 医疗器械标准数据库（覆盖体温计、体外诊断试剂等多类产品）
         const standardsDB = [
             // ========== 法律法规（最高优先级）==========
             { id: '医疗器械监督管理条例', title: '医疗器械监督管理条例（国务院令第739号）', keywords: ['法规', '监管', '注册', '备案', '生产', '经营', '医疗器械'] },
             { id: '医疗器械注册与备案管理办法', title: '医疗器械注册与备案管理办法（国家市场监督管理总局令第47号）', keywords: ['注册', '备案', '法规', '第二类', '第三类'] },
             { id: '医疗器械生产监督管理办法', title: '医疗器械生产监督管理办法（国家市场监督管理总局令第53号）', keywords: ['生产', '监管', '法规', '生产许可'] },
             { id: '医疗器械说明书和标签管理规定', title: '医疗器械说明书和标签管理规定（国家食品药品监督管理总局令第6号）', keywords: ['说明书', '标签', '包装', '标识'] },
+            { id: '体外诊断试剂注册与备案管理办法', title: '体外诊断试剂注册与备案管理办法（国家市场监督管理总局令第48号）', keywords: ['体外诊断', 'IVD', '试剂', '注册', '备案'] },
 
-                                    // ========== 体温计专用标准（核心，强制性）==========
-            // GB 1588-2024 于2024年4月29日发布，2026年5月1日实施，代替GB 1588-2001
+            // ========== 体温计专用标准（核心，强制性）==========
             { id: 'GB 1588-2024', title: '医用玻璃体温计（强制性国家标准，现行有效）', keywords: ['体温计', '医用', '玻璃', '感温液', '示值误差', '测量范围', '三棱', '棒式', '内标式', '强制性'] },
 
+            // ========== 体外诊断试剂专用标准（核心）==========
+            { id: 'YY/T 0316-2016', title: '医疗器械 风险管理对医疗器械的应用', keywords: ['体外诊断', 'IVD', '风险管理', '风险'] },
+            { id: 'GB/T 29790-2013', title: '体外诊断医疗器械 生物样品中量的测量 校准品和控制物质赋值的计量学溯源', keywords: ['体外诊断', 'IVD', '校准品', '质控品', '溯源', '赋值'] },
+            { id: 'YY/T 0589-2005', title: '电解质分析仪', keywords: ['电解质', '分析仪', '体外诊断'] },
+            { id: 'YY/T 0588-2005', title: '临床化学分析仪', keywords: ['临床化学', '生化分析', '体外诊断'] },
+            { id: 'WS/T 406-2012', title: '临床化学检验血液标本的收集与处理', keywords: ['临床化学', '血液标本', '收集', '处理'] },
+            { id: 'GB/T 26124-2010', title: '临床化学体外诊断试剂 复溶稳定性评价', keywords: ['体外诊断', '试剂', '稳定性', '复溶'] },
+            { id: 'YY/T 0027-2018', title: '医用电子体温计', keywords: ['电子体温计', '医用', '体温'] },
+            { id: 'YY/T 1257-2015', title: '医用红外体温计', keywords: ['红外体温计', '医用', '体温'] },
+
             // ========== 质量管理体系标准（推荐性）==========
-            // GB/T 42061-2022 等同采用 ISO 13485:2016，2023年11月1日实施
             { id: 'GB/T 42061-2022', title: '医疗器械 质量管理体系 用于法规的要求（推荐性，现行有效）', keywords: ['质量管理体系', 'ISO 13485', '法规', '质量管理'] },
 
             // ========== 风险管理标准（推荐性）==========
-            // GB/T 42062-2022 等同采用 ISO 14971:2019，2023年11月1日实施
-            // YY/T 0316-2016 暂不废止，但鼓励采用新标准
             { id: 'GB/T 42062-2022', title: '医疗器械 风险管理对医疗器械的应用（推荐性，现行有效）', keywords: ['风险管理', '风险', '危害'] },
 
-                        // ========== 生物学评价标准（推荐性，体温计接触皮肤需适用）==========
-            // GB/T 16886.1-2022 于2023年5月1日实施，代替GB/T 16886.1-2011
+            // ========== 生物学评价标准（推荐性）==========
             { id: 'GB/T 16886.1-2022', title: '医疗器械生物学评价 第1部分：风险管理过程中的评价与试验（推荐性，现行有效）', keywords: ['生物学', '生物相容性', '风险', '评价'] },
             { id: 'GB/T 16886.5-2017', title: '医疗器械生物学评价 第5部分：体外细胞毒性试验', keywords: ['细胞毒性', '生物学', '毒性'] },
-            // GB/T 16886.10-2024 于2025年9月1日实施，代替GB/T 16886.10-2017
             { id: 'GB/T 16886.10-2024', title: '医疗器械生物学评价 第10部分：皮肤致敏试验（推荐性，现行有效）', keywords: ['皮肤致敏', '生物学', '致敏', '皮肤'] },
             { id: 'GB/T 16886.11-2021', title: '医疗器械生物学评价 第11部分：全身毒性试验（推荐性，现行有效）', keywords: ['全身毒性', '生物学', '毒性'] },
 
             // ========== 标签与标志标准（推荐性）==========
-            // YY/T 0466.1-2023 于2025年9月15日实施，代替YY/T 0466.1-2009
             { id: 'YY/T 0466.1-2023', title: '医疗器械 用于制造商提供信息的符号 第1部分：通用要求（推荐性，现行有效）', keywords: ['标签', '标记', '符号', '通用', '标识'] },
             { id: 'YY/T 0466.2-2015', title: '医疗器械 用于医疗器械标签、标记和提供信息的符号 第2部分：符号的制订、选择和确认', keywords: ['标签', '标记', '符号'] },
 
@@ -959,9 +963,14 @@
 
             // ========== 包装标准（推荐性）==========
             { id: 'GB/T 19633.1-2015', title: '最终灭菌医疗器械包装 第1部分：材料、无菌屏障系统和包装系统的要求', keywords: ['包装', '无菌', '材料'] },
+
+            // ========== 临床检验标准（推荐性）==========
+            { id: 'GB/T 29790-2013', title: '体外诊断医疗器械 生物样品中量的测量 校准品和控制物质赋值的计量学溯源', keywords: ['临床检验', '体外诊断', '校准', '溯源'] },
+            { id: 'WS/T 406-2012', title: '临床化学检验血液标本的收集与处理', keywords: ['临床检验', '血液', '标本'] },
+            { id: 'WS/T 407-2012', title: '临床化学检验血液标本的处理', keywords: ['临床检验', '血液', '处理'] },
         ];
 
-                // 搜索适用标准（使用Playwright实时查询）
+                        // 搜索适用标准（优先实时查询，回退到本地智能匹配）
         async function searchStandards() {
             const data = getFormData();
             const resultDiv = document.getElementById('standardsResult');
@@ -996,8 +1005,10 @@
             `;
 
             try {
-                // 调用后端API
-                const response = await fetch(`http://localhost:8000/api/search?keyword=${encodeURIComponent(data.productName || '医疗器械')}`);
+                // 尝试调用后端API
+                const response = await fetch(`http://localhost:8000/api/search?keyword=${encodeURIComponent(data.productName || '医疗器械')}`, {
+                    signal: AbortSignal.timeout(5000) // 5秒超时
+                });
                 const result = await response.json();
 
                 if (result.results && result.results.length > 0) {
@@ -1048,40 +1059,133 @@
                     `;
 
                     resultDiv.innerHTML = html;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
-                            <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
-                            <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
-                                尝试搜索：
-                                <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
-                                   target="_blank" 
-                                   style="color: #3b82f6;">
-                                    百度搜索 "${data.productName} 标准"
-                                </a>
-                            </p>
-                        </div>
-                    `;
+                    return; // 成功获取实时数据，直接返回
                 }
             } catch (error) {
-                console.error('搜索出错:', error);
+                console.log('实时查询失败，回退到本地匹配:', error.message);
+            }
+
+            // 回退：使用本地数据库进行智能匹配
+            const keywords = searchText.toLowerCase().split(/\s+/).filter(k => k.length > 1);
+            const matched = [];
+
+            for (const std of standardsDB) {
+                let score = 0;
+                const stdText = (std.id + ' ' + std.title + ' ' + std.keywords.join(' ')).toLowerCase();
+
+                // 关键词匹配
+                for (const kw of keywords) {
+                    if (stdText.includes(kw)) {
+                        score += 2;
+                    }
+                }
+
+                // 标准关键词匹配
+                for (const stdKw of std.keywords) {
+                    if (searchText.toLowerCase().includes(stdKw)) {
+                        score += 3;
+                    }
+                }
+
+                // 标准类型优先级加分
+                if (std.id.startsWith('法律') || std.id.startsWith('条例') || std.id.startsWith('办法')) {
+                    score += 100;
+                } else if (/^GB \d/.test(std.id)) {
+                    score += 80;
+                } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
+                    score += 60;
+                } else if (/^YY \d/.test(std.id)) {
+                    score += 40;
+                } else if (std.id.startsWith('GB/T')) {
+                    score += 20;
+                } else if (std.id.startsWith('YY/T')) {
+                    score += 10;
+                }
+
+                if (score > 0) {
+                    matched.push({ ...std, score });
+                }
+            }
+
+            // 按匹配度排序
+            matched.sort((a, b) => b.score - a.score);
+
+            // 显示结果
+            if (matched.length === 0) {
                 resultDiv.innerHTML = `
-                    <div style="background: #fef2f2; padding: 12px; border-radius: 6px;">
-                        <p style="color: #dc2626; font-size: 13px;">❌ 搜索失败：${error.message}</p>
-                        <p style="color: #6b7280; font-size: 12px; margin-top: 8px;">
-                            请确保后端服务已启动（python standard_search_server.py）
-                        </p>
-                        <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
-                            或者直接访问：
-                            <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                    <div style="background: #f9fafb; padding: 12px; border-radius: 6px;">
+                        <p style="color: #6b7280; font-size: 13px;">未找到匹配的标准</p>
+                        <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
+                            尝试搜索：
+                            <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械标准')}" 
                                target="_blank" 
                                style="color: #3b82f6;">
-                                全国标准信息公共服务平台
+                                百度搜索 "${data.productName} 标准"
                             </a>
                         </p>
                     </div>
                 `;
+                return;
             }
+
+            // 最多显示10个
+            const displayList = matched.slice(0, 10);
+
+            let html = `
+                <div style="background: #fef3c7; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                    <p style="color: #92400e; font-size: 13px; font-weight: 500;">
+                        ⚠️ 使用本地数据库匹配（后端服务未启动）
+                    </p>
+                    <p style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                        找到 ${matched.length} 个相关标准（显示前 ${displayList.length} 个）
+                    </p>
+                </div>
+            `;
+
+            for (const std of displayList) {
+                let viewUrl = '';
+                if (std.id.startsWith('GB')) {
+                    viewUrl = `https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=${encodeURIComponent(std.id)}`;
+                } else if (std.id.startsWith('YY')) {
+                    viewUrl = `https://www.csres.com/sousuo.html?q=${encodeURIComponent(std.id)}`;
+                } else {
+                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
+                }
+
+                html += `
+                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
+                        <div style="font-weight: 600; color: #374151; font-size: 13px;">
+                            <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
+                            <span style="font-size: 11px; color: #9ca3af; margin-left: 6px;">点击查看 →</span>
+                        </div>
+                        <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
+                        <div style="margin-top: 6px;">
+                            ${std.keywords.slice(0, 5).map(kw => `<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">${kw}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 添加更多搜索链接
+            html += `
+                <div style="margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 6px;">
+                    <p style="color: #6b7280; font-size: 12px;">更多标准搜索：</p>
+                    <div style="margin-top: 6px;">
+                        <a href="https://www.baidu.com/s?wd=${encodeURIComponent(data.productName + ' 医疗器械 国家标准 行业标准')}" 
+                           target="_blank" 
+                           style="color: #3b82f6; font-size: 12px; margin-right: 12px;">
+                            🔍 百度搜索
+                        </a>
+                        <a href="https://std.samr.gov.cn/search/std?q=${encodeURIComponent(data.productName)}" 
+                           target="_blank" 
+                           style="color: #3b82f6; font-size: 12px;">
+                            📚 全国标准信息公共服务平台
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = html;
         }
 
         // 初始化
