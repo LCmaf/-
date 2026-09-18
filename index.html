@@ -1087,10 +1087,29 @@
                 </div>
             `;
 
-            for (const std of displayList) {
+                        for (const std of displayList) {
+                // 根据标准类型生成不同的查看链接
+                let viewUrl = '';
+                if (std.id.startsWith('GB')) {
+                    // 国家标准：使用国家标准全文公开系统
+                    viewUrl = `https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=${encodeURIComponent(std.id)}`;
+                } else if (std.id.startsWith('YY')) {
+                    // 行业标准：使用工标网
+                    viewUrl = `https://www.csres.com/sousuo.html?q=${encodeURIComponent(std.id)}`;
+                } else if (std.id.startsWith('ISO') || std.id.startsWith('IEC')) {
+                    // 国际标准：使用百度搜索
+                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
+                } else {
+                    // 其他标准：使用百度搜索
+                    viewUrl = `https://www.baidu.com/s?wd=${encodeURIComponent(std.id + ' ' + std.title)}`;
+                }
+
                 html += `
-                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
-                        <div style="font-weight: 600; color: #374151; font-size: 13px;">${std.id}</div>
+                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer;" onclick="window.open('${viewUrl}', '_blank')">
+                        <div style="font-weight: 600; color: #374151; font-size: 13px;">
+                            <span style="color: #3b82f6; text-decoration: underline;">${std.id}</span>
+                            <span style="font-size: 11px; color: #9ca3af; margin-left: 6px;">点击查看 →</span>
+                        </div>
                         <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">${std.title}</div>
                         <div style="margin-top: 6px;">
                             ${std.keywords.map(kw => `<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px;">${kw}</span>`).join('')}
